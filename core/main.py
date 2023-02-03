@@ -137,6 +137,8 @@ def main():
 
 #* --------------------------------- WORKING WITH API -----------------------------------------------------------
 
+import json
+
 df_dict = {'amazon_df':amazon_df,
             'disney_plus':disney_plus_df,
             'netflix':netflix_title_df,
@@ -148,10 +150,21 @@ app = FastAPI()
 @app.get('/{df_name}', status_code=status.HTTP_200_OK)
 async def get_dataframe(df_name: str):
     if df_name not in df_dict:
-        return JSONResponse(content={"error": "DataFrame not found"}, status_code=status.HTTP_404_NOT_FOUND)
+        raise HTTPException(status_code=404, detail="DataFrame not found")
     df = df_dict[df_name]
     return JSONResponse(content=df.to_json(orient='index'))
 
+
+@app.get("/{df_name}/{row_id}", status_code=status.HTTP_200_OK)
+def get_row(df_name: str, row_id: int):
+    if df_name not in df_dict:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='DataFrame not found')
+    df = df_dict[df_name]
+    if row_id > len(df) or row_id < 0:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Row not found')
+    row = df.iloc[row_id]
+    
+    return JSONResponse(content=json.dumps(row.to_dict()))
 
 
 
