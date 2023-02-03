@@ -101,7 +101,29 @@ def duration_distrib(df):
     df.drop(columns='duration', inplace=True)
     return df
 
+def count_keywords(df, keyword:str):
+    return df['title'].apply(lambda x: x.lower().count(keyword)).sum()
+
+def movie_rating(df, score:int, year:int):
+    return df[(df['score'] > score) & (df['release_year'] == year)]
+
+df_dict = {'amazon':amazon_df,
+            'disney_plus':disney_plus_df,
+            'netflix':netflix_title_df,
+            'hulu':hulu_df}
+def second_max_scoring(df):
+    return df.sort_values(by='title')['title'].iloc[1]
+
+def high_duration_movie(df):
+    if df[df['duration_type'] == 'seasons']:
+        return df.sort_values(by=['release_year', 'duration_type'])['title'].iloc[0]
+    
+
+
 #* --------------------------------- MAIN FUNC ------------------------------------------------------------------
+
+
+
 
 def main():
     
@@ -139,31 +161,40 @@ def main():
 
 import json
 
-df_dict = {'amazon_df':amazon_df,
-            'disney_plus':disney_plus_df,
-            'netflix':netflix_title_df,
-            'hulu':hulu_df}
-
 app = FastAPI()
 
 
-@app.get('/{df_name}', status_code=status.HTTP_200_OK)
+@app.get('full-df/{df_name}', status_code=status.HTTP_200_OK)
 async def get_dataframe(df_name: str):
+    """
+    Endpoint que permite obtener un DataFrame específico a partir de su nombre.
+
+    :param df_name: Nombre del DataFrame que se desea obtener.
+    :return: JSONResponse con el contenido del DataFrame en formato JSON.
+    :raise HTTPException: Si el nombre del DataFrame no se encuentra en el diccionario.
+    """
     if df_name not in df_dict:
         raise HTTPException(status_code=404, detail="DataFrame not found")
     df = df_dict[df_name]
     return JSONResponse(content=df.to_json(orient='index'))
 
 
-@app.get("/{df_name}/{row_id}", status_code=status.HTTP_200_OK)
+@app.get("full-df/{df_name}/{row_id}", status_code=status.HTTP_200_OK)
 def get_row(df_name: str, row_id: int):
+    """
+    Endpoint que permite obtener una fila específica de un DataFrame a partir de su nombre y ID de fila.
+
+    :param df_name: Nombre del DataFrame que se desea obtener.
+    :param row_id: ID de la fila que se desea obtener.
+    :return: JSONResponse con la fila en formato JSON.
+    :raise HTTPException: Si el nombre del DataFrame no se encuentra en el diccionario o si el ID de fila es inválido.
+    """
     if df_name not in df_dict:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='DataFrame not found')
     df = df_dict[df_name]
     if row_id > len(df) or row_id < 0:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Row not found')
     row = df.iloc[row_id]
-    
     return JSONResponse(content=json.dumps(row.to_dict()))
 
 
